@@ -88,6 +88,98 @@
 &emsp;**测试结果**:将最终的最佳模型的结果提交给官方服务器，获得了79.7％的测试集性能，如**表5**所示。该模型基本上胜过以前的DeepLab变体(例如，具有VGG-16网络的DeepLab-LargeFOV)，目前是PASCAL VOC 2012分段排行榜中性能最佳的方法。 
 ![Figure 9](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/Deeplab2_Figure9.PNG)
 &emsp;**VGG-16 vs. ResNet-101**:我们发现，基于ResNet-101 [11]的DeepLab比采用VGG-16[4]产生了更好的物体边界分割结果，如图9所示。我们认为ResNet-101的身份映射[94]具有与超列特征相似的效果[21]，它利用中间层的特征来更好地定位边界。在“trimap”(沿物体边界的窄带)[22]，[31]内进一步量化图10中的这种效果。如图所示，在CRF之前采用ResNet-101与使用VGG-16结合CRF的物体边界有几乎相同的精度。用CRF后处理ResNet-101结果进一步提高了分割结果。 
+***
+代码相关：
+ poly学习率策略：
+``` python
+ def lr_schedule(epoch):
+	power = 0.9
+	maxepoch = 100
+	return pow(1-epoch/maxepoch,power)
+ ```
+ 
+ 损失函数：
+``` python
+def log_loss(self, y_true, y_pred):
+	'''
+	Compute the softmax log loss.
+
+	Arguments:
+		y_true (nD tensor): size(batch,width,heght,nclass)
+		y_pred (nD tensor): size(batch,width,heght,nclass)
+	Returns:
+		The softmax log loss, a nD-1 Tensorflow tensor. In this context a 2D tensor
+		of shape (batch,).
+	'''
+	shape = K.shape(y_true)
+	y_true = K.reshape(y_true,(-1,shape[1]*shape[2],shape[3]))
+	y_pred = K.reshape(y_pred,(-1,shape[1]*shape[2],shape[3]))
+	y_pred = tf.maximum(y_pred, 1e-15)
+
+	log_loss = tf.reduce_sum(-tf.reduce_sum(y_true * tf.log(y_pred), axis=-1), axis=-1)
+	return log_loss
+ ```
+
+VGG_16为基础网络
+```python
+from keras.models import *
+from keras.layers import *
+from keras.applications.vgg16 import VGG16
+import tensorflow as tf
+def DeeplabV2(input_shape=(224,224,3),apply_softmax=True,classes=2):
+	base_model = VGG16(include_top=None, pooling=None, weights='imagenet', input_shape = input_shape)
+	img_input = base_model.input
+
+	f4 = base_model.get_layer('block4_conv3').output    #block4_conv3  (28,28)
+	h = MaxPooling2D(pool_size=(3, 3), strides=(1, 1))(f4)
+
+	# Block 5
+	h = Conv2D(512, (3, 3), dilation_rate=(2, 2), activation='relu', name='conv5_1',padding="same")(h)
+	h = Conv2D(512, (3, 3), dilation_rate=(2, 2), activation='relu', name='conv5_2',padding="same")(h)
+	h = Conv2D(512, (3, 3), dilation_rate=(2, 2), activation='relu', name='conv5_3',padding="same")(h)
+	p5 = MaxPooling2D(pool_size=(3, 3), strides=(1, 1))(h)
+
+	# hole = 6
+	b1 = Conv2D(1024, (3, 3), dilation_rate=(6, 6), activation='relu', name='fc6_1',padding="same")(p5)
+	b1 = Dropout(0.5)(b1)
+	b1 = Conv2D(1024, (1, 1), activation='relu', name='fc7_1',padding="same")(b1)
+	b1 = Dropout(0.5)(b1)
+	b1 = Conv2D(21, (1, 1), activation='relu', name='fc8_voc12_1',padding="same")(b1)
+
+	# hole = 12
+	b2 = Conv2D(1024, (3, 3), dilation_rate=(12, 12), activation='relu', name='fc6_2',padding="same")(p5)
+	b2 = Dropout(0.5)(b2)
+	b2 = Conv2D(1024, (1, 1), activation='relu', name='fc7_2',padding="same")(b2)
+	b2 = Dropout(0.5)(b2)
+	b2 = Conv2D(21, (1, 1), activation='relu', name='fc8_voc12_2',padding="same")(b2)
+
+	# hole = 18
+	b3 = Conv2D(1024, (3, 3), dilation_rate=(18, 18), activation='relu', name='fc6_3',padding="same")(p5)
+	b3 = Dropout(0.5)(b3)
+	b3 = Conv2D(1024, (1, 1), activation='relu', name='fc7_3',padding="same")(b3)
+	b3 = Dropout(0.5)(b3)
+	b3 = Conv2D(21, (1, 1), activation='relu', name='fc8_voc12_3',padding="same")(b3)
+
+	# hole = 24
+	b4 = Conv2D(1024, (3, 3), dilation_rate=(24, 24), activation='relu', name='fc6_4',padding="same")(p5)
+	b4 = Dropout(0.5)(b4)
+	b4 = Conv2D(1024, (1, 1), activation='relu', name='fc7_4',padding="same")(b4)
+	b4 = Dropout(0.5)(b4)
+	b4 = Conv2D(21, (1, 1), activation='relu', name='fc8_voc12_4',padding="same")(b4)
+	add1 = Add()([b1,b2,b3,b4])
+	o = Conv2DTranspose(1,kernel_size=(16,16), strides=(8, 8),padding="same", use_bias=False, activation='sigmoid')(add1)
+
+	if apply_softmax:
+		o = Conv2DTranspose(classes, kernel_size=(16, 16),strides=(8, 8), padding='same',use_bias=False,activation='softmax')(add1)
+	model = Model(inputs=img_input, outputs=o)
+	return model
+
+if __name__ == '__main__':
+	model = DeeplabV2(input_shape = (224,224,3), apply_softmax=False,classes=2)
+	model.summary()
+	print('load successfully')
+ ```
+
 
 
 
