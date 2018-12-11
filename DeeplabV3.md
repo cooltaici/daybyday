@@ -31,3 +31,11 @@ DeepLabv3的主要贡献在于：
 ![Figure 4]()</br>
 &emsp;为了解决这个问题并且融合全局信息。像[58,59]那样，融合图像级的特征。也就是说我们在每个block里面增加了一个256*1*1的卷积操作（带BN），然后双线性插值上采样到想要的维度。最后，当output_stride为16的时候，我们的ASPP结构包含了一个1*1的卷积，3个dilation rate为（6,12,18）的并行卷积结构，所有的filter数目为256。如Figure 5所示，所有的branch分支结构，最后串联一起，并通过一个256*1*1的卷积操作。</br>
 ![Figure 5]()</br>
+### 4. 实验结果
+&emsp;经过ImageNet预训练的ResNet作为语义分割对象，当output_stride为8的时候，block3和block4将会分别采用dilation rate为2和4的孔洞卷积，我们的数据集使用的是PASCAL VOC2012。评价标注你是intersection-over-union（IOU）</br>
+#### 4.1 训练策略
+&emsp;**学习率**：采用"poly"学习率。</br>
+&emsp;**裁剪大小**：训练和测试时，裁剪的大小都为513*513。</br>
+&emsp;**Batch normalization**：我们在ResNet增加的模块，都包含了batch normalization 参数[38]。我们发现这对于训练非常重要，**因为大的batch训练需要batch normalization 参数**。我们训练output_stride=16的时候，使用batch size = 16。 batch normalization 参数训练的衰减为0.9997（初始学习率为0.007）。 当迭代30K次时，固定batch normalization 参数，采用output_stride=8，并且以学习率0.001继续训练30K次。不错的是，孔洞卷积可以帮助我们在训练的不同阶段控制output_stride而不需要学习其他参数。要注意的是，output_stride=16时
+，训练速度要更快，但牺牲了精度。</br>
+&emsp;**罗杰斯特上采样**：在我们前面的工作中[10,11]，金标准被下采样8倍，因为output_stride=8。我们发现保持金标准的采样率很重要，所以我们将最后的结果上采样8被与金标准比较。
