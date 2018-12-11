@@ -20,13 +20,13 @@ DeepLabv3的主要贡献在于：
 ### 3 Methods
 #### 3.1 孔洞卷积用于密集特征提取
 &emsp;首先，孔洞卷积可以控制dilation_rate来随意控制感受也的大小。其次，孔洞卷积还可以随意控制在全连接网络中的特征密集程度，在本文中，将**output_stride**定义为从输入图像到输出特征的采样比率。比如说在分类网络中，最后的特征响应是输入的1/32，那么output_stride就是32。如果想要对特征响应大小进行翻倍，那么最后一层的池化层或者卷积层的stride要设置为1，然后所有后面的卷积层采用dilation_rate为2的孔洞卷积</br>
-#### 3.2 孔洞卷积用于更深层次模型
+#### 3.2 更深的孔洞卷积（横式）
 &emsp;首先，我们探索吧孔洞卷积模块进行级联的情况。为了实现这种，我们从block4开始复制，如Fig 3所示。每个block有三个3*3卷积层，最后一个卷积的stride为2，但block7除外。这个模型的灵感来源于：stride可以在deep网络更容易获取长范围的信息。如Fig 3a所示，我们发现连续的stride过程不利于语义分割，因为细节信息丢失了很多，参考Table 1结果。所以如Fig 3b所示，我们使用孔洞卷积，使得output_stride达到16。</br>
 ![Figure 3](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/DeepLab_v3/Deeplab3_Figure3.PNG)</br>
 ![Table 1](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/DeepLab_v3/Deeplab3_Table1.PNG)</br>
 ##### 3.2.1 Multi_grid 策略
 &emsp;由论文[4,81,5,67]以及[84,18]中得到的multi_grid策略。在bock4到block7之间采取不同dilation_rate的孔洞卷积。特别的，把每个block (block4-block7)中的三个卷积层的unit rate定义为Multi_Grid=(r1,r2,r3)。最终每个卷积层的dilation rate是整个block rate与Multi_Grid相乘。比如在output_stride=16的block4中，如果Multi_Grid = (1,2,4)， 那么，三个卷积的的dilation rate = 2*(1,2,4) = (2,4,8)。</br>
-#### 3.3空间孔洞金子塔池化（Atrous Spatial Pyramif Pooling）
+#### 3.3空间孔洞金子塔池化（Atrous Spatial Pyramif Pooling）（纵式结构）
 &emsp;我们回顾了在文献[11]中提到的ASPP结构，他的灵感来自于SSP_Net[28,49,31]的成功。但是不同于[11]的是，我们在ASPP结构中添加了batch normalization层。</br>
 &emsp;采取不同dilation rate的ASPP结构可以提取multi-scale信息。但是我们发现，当采样率变大的时候，有效的卷积核权重在减少。就像Figure 4所示的一样，当用3*3的卷积核去处理65*65的特征时，如果dilation rate达到了65这种级别，3*3的卷积核就相当于1*1的卷积核。
 ![Figure 4](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/DeepLab_v3/Deeplab3_Figure4.PNG)</br>
@@ -49,7 +49,8 @@ DeepLabv3的主要贡献在于：
 &emsp;**Multi-grid**：如Table 3所示，Multi-grid的设置以及对应的结果可以看出来，使用Multi-grid要比（1,1,1）要好，而且（2,2,2）效果很差，最好的设置是（1,2,1）。</br>
 &emsp;**Inference strategy on val set**：我们将output_stride改为8，并且采用**多尺度输入**，镜像翻转，COCO预训练等策略，结果如Table 4所示。</br>
 ![Table 4](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/DeepLab_v3/Deeplab3_Table4.PNG)</br>
-&emsp;**ASPP**：如Table 5所示，我们队block4 使用了改进后的ASPP（增加了1*1的卷积操作），把dilation rate设置为（6,12,18）。结果表明Multi-grid=(1,2,4)的时候效果最好，最好的效果达到了77.21%。</br>
+#### 4.3 改进的空间金字塔卷积
+&emsp;**ASPP**：如Table 5所示，我们队block4 使用了改进后的ASPP（增加了1*1的卷积操作以及全局池化），把dilation rate设置为（6,12,18）。结果表明Multi-grid=(1,2,4)的时候效果最好，最好的效果达到了77.21%。这就表明这种纵式的结构更好啦</br>
 ![Table 5](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/DeepLab_v3/Deeplab3_Table5.PNG)</br>
 &emsp;**Inference strategy on val set**：如Table 6所示，最好的结果是output_stride=8，并且采用Augmentation，加上带有Image-level的ASPP结构，最后达到79.35%的成绩。
 ![Table 6](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/DeepLab_v3/Deeplab3_Table6.PNG)</br>
