@@ -1,5 +1,6 @@
 # RefineNet: Multi-Path Refinement Networks for High-Resolution Semantic Segmentation
-[原文]（https://arxiv.org/pdf/1611.06612.pdf）
+[原文]（https://arxiv.org/pdf/1611.06612.pdf） </br>
+**参考例子keras**：https://github.com/Attila94/refinenet-keras/tree/master/model </br>
 **摘要**：
 目前深度卷积网络在目标识别和图像分割等问题上表现突出，但频繁的下采样丢失了原图像的信息。我们提出一种RefineNet网络，使用残差链接显式将各个下采样层和后面的网络层结合在一起。这样网络高层的语义特征可以直接从底层的卷积层中获得refine。一个RefineNet单元使用残差链接和identity映射，对于端对端的训练很有效。我们也介绍了一种链接残差池化，它可以捕获大量背景信息。
 ### 背景
