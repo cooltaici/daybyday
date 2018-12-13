@@ -2,6 +2,7 @@
 **paper**:https://arxiv.org/pdf/1612.01105.pdf </br>
 **官方caffe源码**：https://github.com/hszhao/PSPNet </br>
 **keras代码例子**：https://github.com/Vladkryvoruchko/PSPNet-Keras-tensorflow </br>
+**keras代码例子**：https://github.com/ykamikawa/PSPNet </br>
 **tensorflow代码例子**：https://github.com/hellochick/PSPNet-tensorflow </br>
 ### 1 介绍
 &emsp;场景分割是机器视觉中最重要的任务之一。常见的数据集有LMQ[22]，PASCAL VOC[8,29] 以及ADE20K[43](最具有挑战的一个）。当前最热门的语义分割模型是FCN[26]，但是FCN仍有不足的地方，对于高层语义信息之间的关联还不是很强，如Figure 2所示，一个小船被识别为汽车。从语义之间的关联来看，小船的周围是水，那么从语义的关联性来看，是不应该把小船识别成汽车的。</br>
