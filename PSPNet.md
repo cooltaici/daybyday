@@ -68,6 +68,7 @@
 &emsp; **比赛结果**：我们提出的方法 ImageNet scene parsing 2016中获得了第一名。Table 5展示了部分比赛结果。
 ![Table 5](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/PSPNet/PSPNet_Table5.PNG)</br>
 
+``` python
 from __future__ import print_function
 from math import ceil
 from keras import layers
@@ -355,3 +356,4 @@ def build_pspnet(nb_classes, resnet_layers, input_shape, activation='softmax'):
                   metrics=['accuracy'])
     return model
 
+ ```
