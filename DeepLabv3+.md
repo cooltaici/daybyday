@@ -60,3 +60,8 @@ pointwise conv 用于合并 depthwise conv 的输出
 **使用Xception作为编码结果的总体结果如Table 5所示**：可以看出应用所有技术，最高准确率能达到84.56%。随后我们使用output_stride=8进行训练，并且使用batch normalization参数的方法，最后达到了87.8%的准确率，使用JFT数据集后，达到了89.0%。其它流行的方法比较如 Table 6所示。
 ![Table 5](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/DeepLab_v3plus/DeepLabV3plus_Table5.PNG)</br>
 ![Table 6](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/DeepLab_v3plus/DeepLabV3plus_Table6.PNG)</br>
+
+``` python
+#code
+
+ ```
