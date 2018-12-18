@@ -73,12 +73,12 @@ from __future__ import print_function
 from math import ceil
 from keras import layers
 from keras.layers import Conv2D, MaxPooling2D, AveragePooling2D
-from keras.layers import BatchNormalization, Activation, Input, Dropout, ZeroPadding2D, Lambda
+from keras.layers import BatchNormalization, Activation, Input, Dropout, ZeroPadding2D, Lambda, Permute, Reshape, Conv2DTranspose
 from keras.layers.merge import Concatenate, Add
 from keras.models import Model
 from keras.optimizers import SGD
 from keras.backend import tf as ktf
-import keras.backend as BK
+import keras.backend as K
 import tensorflow as tf
 
 learning_rate = 1e-3  # Layer specific learning rate
@@ -88,9 +88,8 @@ learning_rate = 1e-3  # Layer specific learning rate
 def BN(name=""):
     return BatchNormalization(momentum=0.95, name=name, epsilon=1e-5)
 
-
+#简单的双线性插值上采样
 class Interp(layers.Layer):
-
     def __init__(self, new_size, **kwargs):
         self.new_size = new_size
         super(Interp, self).__init__(**kwargs)
@@ -112,7 +111,49 @@ class Interp(layers.Layer):
         config['new_size'] = self.new_size
         return config
 
+#重排上采样：
+def duc(x, factor=8, output_shape=(512, 512, 1),n_labels=21,output_stride=8):
+    if K.image_data_format() == 'channels_last':
+        bn_axis = 3
+    else:
+        bn_axis = 1
+    H, W, c, r = output_shape[0], output_shape[1], output_shape[2], factor
+    h = H / r
+    w = W / r
+    x = Conv2D(
+            c*r*r,
+            (3, 3),
+            padding='same',
+            name='conv_duc_%s' % factor)(x)
+    x = BatchNormalization(axis=bn_axis, name='bn_duc_%s' % factor)(x)
+    x = Activation('relu')(x)
+    x = Permute((3, 1, 2))(x)
+    x = Reshape((c, r, r, h, w))(x)
+    x = Permute((1, 4, 2, 5, 3))(x)
+    x = Reshape((c, H, W))(x)
+    x = Permute((2, 3, 1))(x)
 
+    out = Conv2D(
+            filters=n_labels,
+            kernel_size=(1, 1),
+            padding='same',
+            name='out_duc_%s' % output_stride)(x)
+    return out
+
+#反卷积上采样
+def DeConv2D(input,fileters,output_stride=8,name="upscore"):
+    out = Conv2DTranspose(
+                    filters=fileters,
+                    kernel_size=(output_stride*2, output_stride*2),
+                    strides=(output_stride, output_stride),
+                    padding='same',
+                    kernel_initializer='he_normal',
+                    kernel_regularizer=None,
+                    use_bias=False,
+                    name=name)(input)
+    return out
+
+#短连接：主干分支
 def residual_conv(prev, level, pad=1, lvl=1, sub_lvl=1, modify_stride=False):
     lvl = str(lvl)
     sub_lvl = str(sub_lvl)
@@ -143,7 +184,7 @@ def residual_conv(prev, level, pad=1, lvl=1, sub_lvl=1, modify_stride=False):
     prev = BN(name=names[5])(prev)
     return prev
 
-
+#短连接：卷积分支
 def short_convolution_branch(prev, level, lvl=1, sub_lvl=1, modify_stride=False):
     lvl = str(lvl)
     sub_lvl = str(sub_lvl)
@@ -164,7 +205,7 @@ def short_convolution_branch(prev, level, lvl=1, sub_lvl=1, modify_stride=False)
 def empty_branch(prev):
     return prev
 
-
+#残差连接：卷积映射
 def residual_short(prev_layer, level, pad=1, lvl=1, sub_lvl=1, modify_stride=False):
     prev_layer = Activation('relu')(prev_layer)
     block_1 = residual_conv(prev_layer, level,
@@ -177,7 +218,7 @@ def residual_short(prev_layer, level, pad=1, lvl=1, sub_lvl=1, modify_stride=Fal
     added = Add()([block_1, block_2])
     return added
 
-
+#残差连接：恒等映射
 def residual_empty(prev_layer, level, pad=1, lvl=1, sub_lvl=1):
     prev_layer = Activation('relu')(prev_layer)
 
@@ -197,7 +238,7 @@ def ResNet(inp, layers):
              "conv1_3_3x3",
              "conv1_3_3x3_bn"]
     # compute input shape
-    if BK.backend() == 'channels_last':
+    if K.backend() == 'channels_last':
         bn_axis = 3
     else:
         bn_axis = 1
@@ -270,29 +311,14 @@ def ResNet(inp, layers):
     return res
 
 
-def interp_block(prev_layer, level, feature_map_shape, input_shape):
-    # if input_shape == (473, 473):
-    #     kernel_strides_map = {1: 60,    #这个size怎么计算的，假设output_stride=8，不是这么直接来的！
-    #                           2: 30,
-    #                           3: 20,
-    #                           6: 10}
-    # elif input_shape == (713, 713):
-    #     kernel_strides_map = {1: 90,
-    #                           2: 45,
-    #                           3: 30,
-    #                           6: 15}
-    # else:
-    #     print("Pooling parameters for input shape ",
-    #           input_shape, " are not defined.")
-    #     exit(1)
+def interp_block(prev_layer, level, feature_map_shape, input_shape, output_stride=8.0):
 
+    kernel_strides = (int(i/output_stride/level) for i in input_shape)
     names = [
         "conv5_3_pool" + str(level) + "_conv",
         "conv5_3_pool" + str(level) + "_conv_bn"
     ]
-    kernel = (kernel_strides_map[level], kernel_strides_map[level])
-    strides = (kernel_strides_map[level], kernel_strides_map[level])
-    prev_layer = AveragePooling2D(kernel, strides=strides)(prev_layer)
+    prev_layer = AveragePooling2D(kernel_strides, strides=kernel_strides)(prev_layer)
 
     prev_layer = Conv2D(512, (1, 1), strides=(1, 1), name=names[0],
                         use_bias=False)(prev_layer)
@@ -311,7 +337,7 @@ def build_pyramid_pooling_module(res, input_shape, output_stride=8.0):
     print("PSP module will interpolate to a final feature map size of %s" %
           (feature_map_size, ))
 
-    interp_block1 = interp_block(res, 1, feature_map_size, input_shape)
+    interp_block1 = interp_block(res, 1, feature_map_size, input_shape,output_stride=output_stride)
     interp_block2 = interp_block(res, 2, feature_map_size, input_shape)
     interp_block3 = interp_block(res, 3, feature_map_size, input_shape)
     interp_block6 = interp_block(res, 6, feature_map_size, input_shape)
@@ -326,7 +352,7 @@ def build_pyramid_pooling_module(res, input_shape, output_stride=8.0):
     return res
 
 
-def build_pspnet(nb_classes, resnet_layers, input_shape, activation='softmax'):
+def build_pspnet(nb_classes, resnet_layers, input_shape, out_activation='softmax'):
     """Build PSPNet."""
     print("Building a PSPNet based on ResNet %i expecting inputs of shape %s predicting %i classes" % (
         resnet_layers, input_shape, nb_classes))
@@ -355,5 +381,11 @@ def build_pspnet(nb_classes, resnet_layers, input_shape, activation='softmax'):
                   loss='categorical_crossentropy',
                   metrics=['accuracy'])
     return model
+
+if __name__ == '__main__':
+    model = build_pspnet(1, 101, (473,473), out_activation='softmax')   #(473,473)（713,713）（640,480）
+    model.load_weights("weights/keras/pspnet101_voc2012.h5")
+    model.summary()
+    print('load successfully')
 
  ```
