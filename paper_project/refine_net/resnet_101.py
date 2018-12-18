@@ -77,7 +77,7 @@ class Scale(Layer):
         base_config = super(Scale, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
-def identity_block(input_tensor, kernel_size, filters, stage, block):
+def identity_block(input_tensor, kernel_size, filters, stage, block, iscale=True):
     '''The identity_block is the block that has no conv layer at shortcut, e.g.
     the implementation of the second to final layers of each block.
     
@@ -97,7 +97,8 @@ def identity_block(input_tensor, kernel_size, filters, stage, block):
     # First conv layer in sub-block
     x = Conv2D(nb_filter1, (1, 1), name=conv_name_base + '2a', use_bias=False)(input_tensor)
     x = BatchNormalization(epsilon=eps, axis=bn_axis, name=bn_name_base + '2a')(x)
-    x = Scale(axis=bn_axis, name=scale_name_base + '2a')(x)
+    if iscale:
+        x = Scale(axis=bn_axis, name=scale_name_base + '2a')(x)
     x = Activation('relu', name=conv_name_base + '2a_relu')(x)
 
     # Second conv layer in sub-block
@@ -105,20 +106,22 @@ def identity_block(input_tensor, kernel_size, filters, stage, block):
     x = Conv2D(nb_filter2, kernel_size,
                       name=conv_name_base + '2b', use_bias=False)(x)
     x = BatchNormalization(epsilon=eps, axis=bn_axis, name=bn_name_base + '2b')(x)
-    x = Scale(axis=bn_axis, name=scale_name_base + '2b')(x)
+    if iscale:
+        x = Scale(axis=bn_axis, name=scale_name_base + '2b')(x)
     x = Activation('relu', name=conv_name_base + '2b_relu')(x)
 
     # Third conv layer in sub-block
     x = Conv2D(nb_filter3, (1, 1), name=conv_name_base + '2c', use_bias=False)(x)
     x = BatchNormalization(epsilon=eps, axis=bn_axis, name=bn_name_base + '2c')(x)
-    x = Scale(axis=bn_axis, name=scale_name_base + '2c')(x)
+    if iscale:
+        x = Scale(axis=bn_axis, name=scale_name_base + '2c')(x)
 
     # Add input and third conv layer
     x = Add(name='res' + str(stage) + block)([x, input_tensor])
     x = Activation('relu', name='res' + str(stage) + block + '_relu')(x)
     return x
 
-def conv_block(input_tensor, kernel_size, filters, stage, block, strides=(2, 2)):
+def conv_block(input_tensor, kernel_size, filters, stage, block, strides=(2, 2), iscale = True):
     '''conv_block is the "bottleneck" building block, e.g. the implementation
     of the conv2_1, conv3_1, conv4_1 and conv5_1 blocks.
     
@@ -141,7 +144,8 @@ def conv_block(input_tensor, kernel_size, filters, stage, block, strides=(2, 2))
     x = Conv2D(nb_filter1, (1, 1), strides=strides,
                       name=conv_name_base + '2a', use_bias=False)(input_tensor)
     x = BatchNormalization(epsilon=eps, axis=bn_axis, name=bn_name_base + '2a')(x)
-    x = Scale(axis=bn_axis, name=scale_name_base + '2a')(x)
+    if iscale:
+        x = Scale(axis=bn_axis, name=scale_name_base + '2a')(x)
     x = Activation('relu', name=conv_name_base + '2a_relu')(x)
 
     # Second conv layer in sub-block
@@ -149,13 +153,15 @@ def conv_block(input_tensor, kernel_size, filters, stage, block, strides=(2, 2))
     x = Conv2D(nb_filter2, kernel_size,
                       name=conv_name_base + '2b', use_bias=False)(x)
     x = BatchNormalization(epsilon=eps, axis=bn_axis, name=bn_name_base + '2b')(x)
-    x = Scale(axis=bn_axis, name=scale_name_base + '2b')(x)
+    if iscale:
+        x = Scale(axis=bn_axis, name=scale_name_base + '2b')(x)
     x = Activation('relu', name=conv_name_base + '2b_relu')(x)
     
     # Third conv layer in sub-block (1x1)
     x = Conv2D(nb_filter3, (1, 1), name=conv_name_base + '2c', use_bias=False)(x)
     x = BatchNormalization(epsilon=eps, axis=bn_axis, name=bn_name_base + '2c')(x)
-    x = Scale(axis=bn_axis, name=scale_name_base + '2c')(x)
+    if iscale:
+        x = Scale(axis=bn_axis, name=scale_name_base + '2c')(x)
 
     # Residual connection
     shortcut = Conv2D(nb_filter3, (1, 1), strides=strides,
@@ -168,7 +174,7 @@ def conv_block(input_tensor, kernel_size, filters, stage, block, strides=(2, 2))
     x = Activation('relu', name='res' + str(stage) + block + '_relu')(x)
     return x
 
-def resnet101_model(input_shape, weights_path, freeze_frontend, include_fc=False):
+def resnet101_model(input_shape, weights_path, freeze_frontend, include_fc=False,iscale=True):
     '''Instantiate the ResNet101 architecture,
     # Arguments
         weights_path: path to pretrained weight file
@@ -184,12 +190,13 @@ def resnet101_model(input_shape, weights_path, freeze_frontend, include_fc=False
     x = ZeroPadding2D((3, 3), name='conv1_zeropadding')(img_input)
     x = Conv2D(64, (7, 7), strides=(2, 2), name='conv1', use_bias=False)(x)
     x = BatchNormalization(epsilon=eps, axis=bn_axis, name='bn_conv1')(x)
-    x = Scale(axis=bn_axis, name='scale_conv1')(x)
+    if iscale:
+        x = Scale(axis=bn_axis, name='scale_conv1')(x)
     x = Activation('relu', name='conv1_relu')(x)
     x = MaxPooling2D((3, 3), strides=(2, 2), name='pool1', padding='same')(x)
 
     # Block 1
-    x = conv_block(x, (3,3), [64, 64, 256], stage=2, block='a', strides=(1,1)) #conv2_1
+    x = conv_block(x, (3,3), [64, 64, 256], stage=2, block='a', strides=(1,1)) #conv2_1,no stride appled
     x = identity_block(x, (3,3), [64, 64, 256], stage=2, block='b') #conv2_2
     block_1_out = identity_block(x, (3,3), [64, 64, 256], stage=2, block='c') #conv2_3
 
@@ -224,5 +231,9 @@ def resnet101_model(input_shape, weights_path, freeze_frontend, include_fc=False
         print('Loading ResNet weights...')
         model.load_weights(weights_path, by_name=True)
         print('ResNet weights loaded.')
-
     return model
+
+if __name__ == '__main__':
+    model = resnet101_model(input_shape, weights_path, freeze_frontend, include_fc=False,iscale=True)
+    model.summary()
+    print('load successfully')

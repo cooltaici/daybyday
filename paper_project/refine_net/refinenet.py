@@ -4,39 +4,56 @@ Based on https://github.com/GeorgeSeif/Semantic-Segmentation-Suite
 
 from keras.models import Model
 from model.resnet_101 import resnet101_model
-from model.layers.Upsampling import Upsampling
 from keras.layers import Conv2D, Conv2DTranspose, BatchNormalization, ReLU, Add, MaxPooling2D
 
-def ConvBlock(inputs, n_filters, kernel_size=[3, 3]):
+from keras.layers import Layer, InputSpec
+import keras.backend as K
+import tensorflow as tf
+
+class Upsampling(Layer):
+    def __init__(self, scale = 1, **kwargs):
+        self.scale = scale
+        self.input_spec = [InputSpec(ndim=4)]
+        super(Upsampling, self).__init__(**kwargs)
+
+    def compute_output_shape(self, input_shape):
+        width = int(self.scale * input_shape[1] if input_shape[1] is not None else None)
+        height = int(self.scale * input_shape[2] if input_shape[2] is not None else None)
+        return (input_shape[0],width,height,input_shape[3])
+
+    def call(self, X, mask=None):
+        original_shape = K.int_shape(X)
+        new_shape = tf.shape(X)[1:3]
+        new_shape *= tf.constant(self.scale)
+        X = tf.image.resize_bilinear(X, new_shape)
+        X.set_shape((None, original_shape[1] * self.scale, original_shape[2] * self.scale, None))
+        return X
+
+    def get_config(self):
+        config = {'scale': self.scale}
+        base_config = super(Upsampling, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+
+
+def ConvBlock(inputs, n_filters, kernel_size=(3, 3), padding = "same"):
     """
     Basic conv block for Encoder-Decoder
     Apply successivly Convolution, BatchNormalization, ReLU nonlinearity
     """
     
-    net = Conv2D(n_filters, kernel_size, padding='same')(inputs)
+    net = Conv2D(n_filters, kernel_size, padding=padding)(inputs)
     net = BatchNormalization()(net)
     net = ReLU()(net)
-    
-    # TODO: Check order!
-    
-#    net = tf.nn.relu(slim.batch_norm(inputs, fused=True))
-#    net = slim.conv2d(net, n_filters, kernel_size, activation_fn=None, normalizer_fn=None)
     return net
 
-def ConvUpscaleBlock(inputs, n_filters, kernel_size=[3, 3], scale=2):
+def ConvUpscaleBlock(inputs, n_filters, kernel_size=(3, 3), scale=2):
     """
     Basic conv transpose block for Encoder-Decoder upsampling
     Apply successivly Transposed Convolution, BatchNormalization, ReLU nonlinearity
     """
-    
     net = Conv2DTranspose(n_filters, kernel_size, strides = (scale,scale))(inputs)
     net = BatchNormalization()(net)
     net = ReLU()(net)
-    
-    # TODO: Check order!
-    
-#    net = tf.nn.relu(slim.batch_norm(inputs, fused=True))
-#    net = slim.conv2d_transpose(net, n_filters, kernel_size=[3, 3], stride=[scale, scale], activation_fn=None)
     return net
 
 
@@ -82,7 +99,7 @@ def ChainedResidualPooling(inputs,n_filters=256):
     
     net_relu = ReLU()(inputs)
     net = MaxPooling2D(pool_size = (5,5), strides = 1, padding = 'same')(net_relu)
-    net = Conv2D(n_filters, 3, padding='same')(net_relu)
+    net = Conv2D(n_filters, 3, padding='same')(net)
     net_sum_1 = Add()([net,net_relu])
     
     net = MaxPooling2D(pool_size = (5,5), strides = 1, padding = 'same')(net)
@@ -109,16 +126,12 @@ def MultiResolutionFusion(high_inputs=None,low_inputs=None,n_filters=256):
     
     """
     if high_inputs is None: # RefineNet block 4
-        
         fuse = Conv2D(n_filters, 3, padding='same')(low_inputs)
-
         return fuse
 
     else:
-
         conv_low = Conv2D(n_filters, 3, padding='same')(low_inputs)
         conv_high = Conv2D(n_filters, 3, padding='same')(high_inputs)
-        
         conv_low_up = Upsampling(scale = 2)(conv_low)
         
         return Add()([conv_low_up, conv_high])
@@ -158,7 +171,7 @@ def RefineBlock(high_inputs=None,low_inputs=None):
 
 
 
-def build_refinenet(input_shape, num_class, resnet_weights, freeze_frontend, upscaling_method='bilinear'):
+def build_refinenet(input_shape, num_class, resnet_weights, upscaling_method="bilinear"):
     """
     Builds the RefineNet model. 
 
@@ -174,7 +187,7 @@ def build_refinenet(input_shape, num_class, resnet_weights, freeze_frontend, ups
     """
     
     # Build ResNet-101
-    model_base = resnet101_model(input_shape, resnet_weights, freeze_frontend)
+    model_base = resnet101_model(input_shape, resnet_weights)
     model_base.trainable = False
 
     # Get ResNet block output layers
@@ -202,12 +215,13 @@ def build_refinenet(input_shape, num_class, resnet_weights, freeze_frontend, ups
     net = ResidualConvUnit(net)
     net = ResidualConvUnit(net)
 
-    if upscaling_method.lower() == 'conv':
+    if upscaling_method.lower() == "conv":
         net = ConvUpscaleBlock(net, 128, kernel_size=[3, 3], scale=2)
         net = ConvBlock(net, 128, padding='same')
         net = ConvUpscaleBlock(net, 64, kernel_size=[3, 3], scale=2)
         net = ConvBlock(net, 64, padding='same')
-    elif upscaling_method.lower() == 'bilinear':
+
+    elif upscaling_method.lower() == "bilinear":
         net = Upsampling(scale = 4)(net)
         
     net = Conv2D(num_class, 1, activation = 'sigmoid')(net)
