@@ -16,9 +16,9 @@
 ### 2.研究背景
 略
 ### 3.本文提出的方法
-![Figure 2](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/RefineNet_Fig2.PNG)
+![Figure 2](https://github.com/cooltaici/daybyday/blob/master/picture_paper/RefineNet/RefineNet_Figure2.PNG)
 **翻译**：全卷积网络在dense classification上的比较。对于（a）来说，ResNet由于大量的下采样，损失很多细节信息。（b）在最后两个block使用空洞卷积代替了下采样，但是难以训练并且耗费太多内存。（c）我们提出的方法利用了不同层次的特征，并且把它们进行融合得到高分辨率的预测，并且不需要保持大量维度的中间层特征。具体细节如图3所示。
-![Figure 3](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/RefineNet_Fig3.PNG)
+![Figure 3](https://github.com/cooltaici/daybyday/blob/master/picture_paper/RefineNet/RefineNet_Fig3.PNG)
 **翻译**：在本文中使用短残差网络连接（RefineNet内部）和长残差网络连接（ResNet和RefineNet模块之间）
 #### 3.1 Multi-Path Refinement
 &emsp;我们把在ImageNet数据集上训练好的ResNet按照map大小分成4个blok。我们构造了串联的4个RefineNet，其中
@@ -34,15 +34,15 @@
 #### 4.2 Segmantic Segmentation
 **PASCAL VOC 2012**
 &emsp;在PASCAL VOC 2012的结果如Table 5所示。
-![Table 5](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/RefineNet_Table5.PNG)
+![Table 5](https://github.com/cooltaici/daybyday/blob/master/picture_paper/RefineNet/RefineNet_Table5.PNG)
 **PASCAL-Context**
 &emsp;PASCAL-Context的结果如Table 6所示。
-![Table 6](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/RefineNet_Table6.PNG)
+![Table 6](https://github.com/cooltaici/daybyday/blob/master/picture_paper/RefineNet/RefineNet_Table6.PNG)
 #### 4.3 RefineNet的串联变体
 &emsp;前面已经介绍过，RefineNet结构是很灵活的，这里我们分析了 a single RefineNet，a 2-cascaded RefineNet 和 a 4-cascaded RefineNet with 2-scale ResNet。这三种变体，结构如**图7**所示。
-![Figure 7](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/RefineNet_figure7.PNG)
+![Figure 7](https://github.com/cooltaici/daybyday/blob/master/picture_paper/RefineNet/RefineNet_figure7.PNG)
 &emsp;single RefineNet model 结构很简单，只有一个RefineNet block，把所有4个ResNet输入作为一个RefineNet Block结构的输入。2-cascaded RefineNet 结构和咱们在图2（C）中描述的很类似，但是只用了两个RefineNet block。2-scale的版本，有两个尺度的输入，也就是两个独立的ResNet来提取特征。这三种变体和本文中主要的结构对比结果是Table 9所示。
-![Table 9](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/RefineNet_Table9.PNG)
+![Table 9](https://github.com/cooltaici/daybyday/blob/master/picture_paper/RefineNet/RefineNet_Table9.PNG)
 
 
 ``` python
