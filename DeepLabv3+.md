@@ -1,7 +1,8 @@
 # Rethinking Atrous Convolution for Semantic Image Segmentation
 **paper**：https://arxiv.org/pdf/1802.02611v1.pdf </br>
+**Keras 源代码参考** https://github.com/Shmuelnaaman/deeplab_v3 </br> 
 **Keras 源代码** :https://github.com/mjDelta/deeplabv3plus-keras </br>
-**Keras 源代码1** https://github.com/Shmuelnaaman/deeplab_v3 </br>
+**tesorflow 官方及与训练参数**： https://github.com/tensorflow/models/tree/master/research/deeplab </br>
 **DeeplabV1-V3+**：https://blog.csdn.net/Dlyldxwl/article/details/81148810 </br>
 **DeepLabV3+比较好的翻译**：https://blog.csdn.net/zziahgf/article/details/79557105 </br>
 **实验代码**：https://github.com/cooltaici/daybyday/blob/master/paper_project/Deeplav_v3plus.py </br>
@@ -400,7 +401,7 @@ def Deeplabv3(weights='pascal_voc', input_tensor=None, input_shape=(512, 512, 3)
     if backbone == 'xception':
         if OS == 8:
             entry_block3_stride = 1
-            middle_block_rate = 2  # ! Not mentioned in paper, but required
+            middle_block_rate = 2
             exit_block_rates = (2, 4)
             atrous_rates = (12, 24, 36)
         else:
@@ -497,7 +498,7 @@ def Deeplabv3(weights='pascal_voc', input_tensor=None, input_shape=(512, 512, 3)
 
     # branching for Atrous Spatial Pyramid Pooling
 
-    # Image Feature branch
+    # Image Feature branch： ASPP：一个全局池化，一个1*1卷积，三个孔洞卷积
     #out_shape = int(np.ceil(input_shape[0] / OS))
     b4 = AveragePooling2D(pool_size=(int(np.ceil(input_shape[0] / OS)), int(np.ceil(input_shape[1] / OS))))(x)
     b4 = Conv2D(256, (1, 1), padding='same',
@@ -538,9 +539,10 @@ def Deeplabv3(weights='pascal_voc', input_tensor=None, input_shape=(512, 512, 3)
 
     if backbone == 'xception':
         # Feature projection
-        # x4 (x2) block
+        # 先将编码特征，上采样4层
         x = BilinearUpsampling(output_size=(int(np.ceil(input_shape[0] / 4)),
                                             int(np.ceil(input_shape[1] / 4))))(x)
+        #底层特征
         dec_skip1 = Conv2D(48, (1, 1), padding='same',
                            use_bias=False, name='feature_projection0')(skip1)
         dec_skip1 = BatchNormalization(
