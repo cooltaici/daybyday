@@ -6,7 +6,7 @@
 **tensorflow代码例子**：https://github.com/hellochick/PSPNet-tensorflow </br>
 ### 1 介绍
 &emsp;场景分割是机器视觉中最重要的任务之一。常见的数据集有LMQ[22]，PASCAL VOC[8,29] 以及ADE20K[43](最具有挑战的一个）。当前最热门的语义分割模型是FCN[26]，但是FCN仍有不足的地方，对于高层语义信息之间的关联还不是很强，如Figure 2所示，一个小船被识别为汽车。从语义之间的关联来看，小船的周围是水，那么从语义的关联性来看，是不应该把小船识别成汽车的。</br>
-![Figure 2](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/PSPNet/PSPNet_Figure2.PNG)</br>
+![Figure 2](https://github.com/cooltaici/daybyday/blob/master/picture_paper/PSPNet/PSPNet_Figure2.PNG)</br>
 &emsp;我们知道了FCN的问题是缺少了全图场景的类别暗示。空间金字塔池化[18]可以很好的这种Image-level信息。不同于这些方法，为了更好的融合全局特征，我们提出了金字塔语义分割图像(PSPNet）。和FCN不同，我们把像素级特征和全局特征很好的融合在一起。此外，我们提出了一个优化方法以及损失函数。我们将公开所有实现细节，并且代码也是公开的。
 - 提出了一个金字塔场景解析网络，能够将难解析的场景信息特征嵌入基于FCN预测框架中
 - 在基于深度监督损失ResNet上制定有效的优化策略
@@ -15,7 +15,7 @@
 
 ### 3. Pyramin Scene Parsing Network
 &emsp;我们的PSPNet网络结果如Figure 3所示。</br>
-![Figure 3](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/PSPNet/PSPNet_Figure3.PNG)</br>
+![Figure 3](https://github.com/cooltaici/daybyday/blob/master/picture_paper/PSPNet/PSPNet_Figure3.PNG)</br>
 #### 3.1 重要的发现
 &emsp;新的ADE20K数据集[43]包含了150个目标类别，以及1038个图像级场景描述（卧室，马路等）。根据FCN算法在ADE20K数据集的表现，我们总结了几个关于复杂场景分割的几个常见问题。</br>
 **不匹配的类别**：语义之间的联系是重要的，也就是说目标之间是有联系的（**注：这在肿瘤分割中可能不是很适用**）。如果不能收集到丰富的语义特征将会增加错误识别的风险。</br>
@@ -40,7 +40,7 @@
 
 ### 4. 对Resnet-based FCN 进行深度监督
 &emsp; 深度预训练的网络已经取得了不错的结果[17,33,13]，但是对于图像识别人物来说，越深的网络训练起来越复杂[32,19]，ResNet通过残差连接解决了这个问题。</br>
-![Figure 4](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/PSPNet/PSPNet_Figure4.PNG)</br>
+![Figure 4](https://github.com/cooltaici/daybyday/blob/master/picture_paper/PSPNet/PSPNet_Figure4.PNG)</br>
 &emspc; 除了最后的softmax损失函数外，我们另外针对ResNet设计了辅助损失，如Figure 4所示。在测试阶段，我们将会丢掉辅助损失分支。</br>
 
 ### 5. 实验
@@ -53,20 +53,20 @@
 #### 5.2 ImageNet Scene Parsing Challenge 2016
 
 &emsp; 为了寻找PSPNet最优的效果。我们测试了均值池化和最大池化，只要一个全局池化以及不同尺度池化，在池化操作后以及级联前有没有惊醒维度衰减。所有的结果如Table 1所示。(1)均值池化要比最大池化效果好。(2)金字塔池化模块要比单一使用全局池化要好。(3)维度衰减效果更好。</br>
-![Table 1](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/PSPNet/PSPNet_Table1.PNG)</br>
+![Table 1](https://github.com/cooltaici/daybyday/blob/master/picture_paper/PSPNet/PSPNet_Table1.PNG)</br>
 
 &emsp;**辅助损失测试**：辅助损失权重设置从0到1，测试结果如Table 2所示，当权重为0.4的时候效果最好。
-![Table 2](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/PSPNet/PSPNet_Table2.PNG)</br>
+![Table 2](https://github.com/cooltaici/daybyday/blob/master/picture_paper/PSPNet/PSPNet_Table2.PNG)</br>
 
 &emsp; **网络深度测试**：在图像分类任务中，越深的网络一般获得更好的效果。我们对ResNet的网络深度进行了测试，分别有{ 50, 101, 152, 269}，如 Figure 5所示，网络越深，效果越好。结果统计如Table 3所示。</br>
-![Table 3](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/PSPNet/PSPNet_Table3.PNG)</br>
-![Figure 5](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/PSPNet/PSPNet_Figure5.PNG)</br>
+![Table 3](https://github.com/cooltaici/daybyday/blob/master/picture_paper/PSPNet/PSPNet_Table3.PNG)</br>
+![Figure 5](https://github.com/cooltaici/daybyday/blob/master/picture_paper/PSPNet/PSPNet_Figure5.PNG)</br>
 
 &emsp; **其它测试**：其它相关测试如Table 4所示，辅助损失、均值池化、数据扩增以及多尺度输入等方案都有助于性能的提升。</br>
-![Table 4](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/PSPNet/PSPNet_Table4.PNG)</br>
+![Table 4](https://github.com/cooltaici/daybyday/blob/master/picture_paper/PSPNet/PSPNet_Table4.PNG)</br>
 
 &emsp; **比赛结果**：我们提出的方法 ImageNet scene parsing 2016中获得了第一名。Table 5展示了部分比赛结果。
-![Table 5](https://paper-reading-1258239805.cos.ap-chengdu.myqcloud.com/PSPNet/PSPNet_Table5.PNG)</br>
+![Table 5](https://github.com/cooltaici/daybyday/blob/master/picture_paper/PSPNet/PSPNet_Table5.PNG)</br>
 
 ``` python
 from __future__ import print_function
