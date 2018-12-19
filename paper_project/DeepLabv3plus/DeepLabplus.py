@@ -4,11 +4,14 @@
 This model is based on TF repo:
 https://github.com/tensorflow/models/tree/master/research/deeplab
 On Pascal VOC, original model gets to 84.56% mIOU
+
 Now this model is only available for the TensorFlow backend,
 due to its reliance on `SeparableConvolution` layers, but Theano will add
 this layer soon.
+
 MobileNetv2 backbone is based on this repo:
 https://github.com/JonathanCMitchell/mobilenet_v2_keras
+
 # Reference
 - [Encoder-Decoder with Atrous Separable Convolution
     for Semantic Image Segmentation](https://arxiv.org/pdf/1802.02611.pdf)
@@ -271,6 +274,7 @@ def _inverted_res_block(inputs, expansion, stride, alpha, filters, block_id, ski
 
 def Deeplabv3(weights='pascal_voc', input_tensor=None, input_shape=(512, 512, 3), classes=21, backbone='mobilenetv2', OS=16, alpha=1.):
     """ Instantiates the Deeplabv3+ architecture
+
     Optionally loads weights pre-trained
     on PASCAL VOC. This model is available for TensorFlow only,
     and can only be used with inputs following the TensorFlow
@@ -296,12 +300,15 @@ def Deeplabv3(weights='pascal_voc', input_tensor=None, input_shape=(512, 512, 3)
                 - If `alpha` = 1, default number of filters from the paper
                     are used at each layer.
             Used only for mobilenetv2 backbone
+
     # Returns
         A Keras model instance.
+
     # Raises
         RuntimeError: If attempting to run this model with a
             backend that does not support separable convolutions.
         ValueError: in case of invalid argument for `weights` or `backbone`
+
     """
 
     if not (weights in {'pascal_voc', None}):
@@ -328,7 +335,7 @@ def Deeplabv3(weights='pascal_voc', input_tensor=None, input_shape=(512, 512, 3)
     if backbone == 'xception':
         if OS == 8:
             entry_block3_stride = 1
-            middle_block_rate = 2  # ! Not mentioned in paper, but required
+            middle_block_rate = 2
             exit_block_rates = (2, 4)
             atrous_rates = (12, 24, 36)
         else:
@@ -425,7 +432,7 @@ def Deeplabv3(weights='pascal_voc', input_tensor=None, input_shape=(512, 512, 3)
 
     # branching for Atrous Spatial Pyramid Pooling
 
-    # Image Feature branch
+    # Image Feature branch： ASPP：一个全局池化，一个1*1卷积，三个孔洞卷积
     #out_shape = int(np.ceil(input_shape[0] / OS))
     b4 = AveragePooling2D(pool_size=(int(np.ceil(input_shape[0] / OS)), int(np.ceil(input_shape[1] / OS))))(x)
     b4 = Conv2D(256, (1, 1), padding='same',
@@ -466,9 +473,10 @@ def Deeplabv3(weights='pascal_voc', input_tensor=None, input_shape=(512, 512, 3)
 
     if backbone == 'xception':
         # Feature projection
-        # x4 (x2) block
+        # 先将编码特征，上采样4层
         x = BilinearUpsampling(output_size=(int(np.ceil(input_shape[0] / 4)),
                                             int(np.ceil(input_shape[1] / 4))))(x)
+        #底层特征
         dec_skip1 = Conv2D(48, (1, 1), padding='same',
                            use_bias=False, name='feature_projection0')(skip1)
         dec_skip1 = BatchNormalization(
@@ -513,11 +521,5 @@ def Deeplabv3(weights='pascal_voc', input_tensor=None, input_shape=(512, 512, 3)
     return model
 
 
-def preprocess_input(x):
-    """Preprocesses a numpy array encoding a batch of images.
-    # Arguments
-        x: a 4D numpy array consists of RGB values within [0, 255].
-    # Returns
-        Input array scaled to [-1.,1.]
-    """
-    return imagenet_utils.preprocess_input(x, mode='tf')
+if __name__ == '__main__':
+    print('load successfully')
