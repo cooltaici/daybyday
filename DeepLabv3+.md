@@ -62,7 +62,7 @@ pointwise conv 用于合并 depthwise conv 的输出
 ![Table 6](https://github.com/cooltaici/daybyday/blob/master/picture_paper/DeepLabV3plus/DeepLabV3plus_Table6.PNG)</br>
 
 ``` python
-#code
+#经过测试keras==2.2.0这个版本可以达到DepthwiseConv2D的要求
 # -*- coding: utf-8 -*-
 
 """ Deeplabv3+ model for Keras.
