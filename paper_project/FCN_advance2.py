@@ -49,49 +49,6 @@ def FCN8(nClasses,iflevel = False):
             break
     return model
 
-def FCN8_4096(nClasses,iflevel = False):
-    input_shape = (224,224,3)
-    base_model = VGG16(include_top=None, pooling=None, weights='imagenet', input_shape = input_shape)
-    img_input = base_model.input
-    # f1 = base_model.get_layer('block1_pool').output    #112*112
-    # f2 = base_model.get_layer('block2_pool').output    #56*56
-    f3 = base_model.get_layer('block3_pool').output
-    f4 = base_model.get_layer('block4_pool').output    #14*14
-    f5 = base_model.get_layer('block5_pool').output    #7*7
-
-    o = f5
-    o = Conv2D( 1024 , ( 7 , 7 ) , activation='relu' , padding='same')(o)
-    o = Dropout(0.5)(o)
-    o = Conv2D( 4096 , ( 1 , 1 ) , activation='relu' , padding='same')(o)
-    o = Dropout(0.5)(o)
-
-    o = Conv2D( 2048 ,  ( 1 , 1 ) ,kernel_initializer='he_normal', padding='same',name="UnConv7")(o)     #1层
-    o = Conv2DTranspose( 512 , kernel_size=(4,4) ,  strides=(2,2) , padding='same', use_bias=False)(o)
-
-    o2 = f4
-    o2 = Conv2D(512 , (1 , 1 ) ,kernel_initializer='he_normal' , padding='same')(o2)
-    o = Add()([ o , o2 ])                                                                       #2层
-
-    o = Conv2DTranspose(128 , kernel_size=(4,4) ,  strides=(2,2), padding='same' , use_bias=False )(o)
-    o3 = f3
-    o3 = Conv2D(128 ,  (1 , 1 ) ,kernel_initializer='he_normal', padding='same')(o3)
-    o  = Add()([ o , o3 ])                                                                      #3层
-
-    if iflevel:
-        o = Conv2DTranspose(nClasses, kernel_size=(16, 16), name='out_image', strides=(8, 8), padding='same',
-                            use_bias=False,activation='relu')(o)
-    else:
-        o = Conv2DTranspose(1, kernel_size=(16, 16), name='out_image', strides=(8, 8), padding='same',
-                            use_bias=False,activation='sigmoid')(o)
-
-    model = Model(img_input , o )
-    midname = 'block2_conv1'  #block3_conv1
-    for layers in model.layers:
-        layers.trainable = False
-        if layers.name == midname:
-            break
-    return model
-
 #FCN8基础上在加SSD
 def FCN8_ssd(weightpath=r"",
             isnorm = True,
