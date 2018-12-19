@@ -5,7 +5,6 @@
 **tesorflow 官方及与训练参数**： https://github.com/tensorflow/models/tree/master/research/deeplab </br>
 **DeeplabV1-V3+**：https://blog.csdn.net/Dlyldxwl/article/details/81148810 </br>
 **DeepLabV3+比较好的翻译**：https://blog.csdn.net/zziahgf/article/details/79557105 </br>
-**实验代码**：https://github.com/cooltaici/daybyday/blob/master/paper_project/Deeplav_v3plus.py </br>
 **2018语义分割类导读**：https://blog.csdn.net/SHAOYEZUIZUISHAUI/article/details/82666764  </br>
 ### 本文的主要贡献：
 第一：对DeepLabv3添加了简单有效的解码模块，这可以大大提高对边界的分割，并且可以通过控制atrous convolution 来控制编码特征的分辨率，来平衡精度和运行时间（已有编码-解码结构不具有该能力）</br>
