@@ -267,9 +267,9 @@ def build_pyramid_pooling_module(res, input_shape, output_stride=8.0):
           (feature_map_size, ))
 
     interp_block1 = interp_block(res, 1, feature_map_size, input_shape,output_stride=output_stride)
-    interp_block2 = interp_block(res, 2, feature_map_size, input_shape)
-    interp_block3 = interp_block(res, 3, feature_map_size, input_shape)
-    interp_block6 = interp_block(res, 6, feature_map_size, input_shape)
+    interp_block2 = interp_block(res, 2, feature_map_size, input_shape,output_stride=output_stride)
+    interp_block3 = interp_block(res, 3, feature_map_size, input_shape,output_stride=output_stride)
+    interp_block6 = interp_block(res, 6, feature_map_size, input_shape,output_stride=output_stride)
 
     # concat all these layers. resulted
     # shape=(1,feature_map_size_x,feature_map_size_y,4096)
@@ -296,11 +296,12 @@ def build_pspnet(nb_classes, resnet_layers, input_shape, out_activation='softmax
     x = Activation('relu')(x)
     x = Dropout(0.1)(x)
 
-    x = Conv2D(nb_classes, (1, 1), strides=(1, 1), name="conv6")(x)
-    # x = Lambda(Interp, arguments={'shape': (
-    #    input_shape[0], input_shape[1])})(x)
-    x = Interp([input_shape[0], input_shape[1]])(x)
-    x = Activation('softmax')(x)
+    #x = Conv2D(nb_classes, (1, 1), strides=(1, 1), name="conv6")(x)
+    # x = Interp([input_shape[0], input_shape[1]])(x)
+    # x = Activation('softmax')(x)
+
+    x = Conv2D(56, (1, 1), padding='same', name="conv6")(x)
+    x = Conv2DTranspose(1,(8,8),strides=(4,4),padding="same",use_bias=False,activation='sigmoid')(x)
 
     model = Model(inputs=inp, outputs=x)
 
@@ -312,7 +313,7 @@ def build_pspnet(nb_classes, resnet_layers, input_shape, out_activation='softmax
     return model
 
 if __name__ == '__main__':
-    model = build_pspnet(1, 101, (473,473), out_activation='softmax')   #(473,473)（713,713）（640,480）
-    model.load_weights("weights/keras/pspnet101_voc2012.h5")
+    model = build_pspnet(1, 101, (224,224))   #(473,473)（713,713）（640,480）
+    #model.load_weights("weights/keras/pspnet101_voc2012.h5")
     model.summary()
     print('load successfully')
