@@ -5,8 +5,10 @@ from keras.layers import Conv2D, MaxPooling2D, AveragePooling2D
 from keras.layers import BatchNormalization, Activation, Input, Dropout, ZeroPadding2D, Lambda, Permute, Reshape, Conv2DTranspose
 from keras.layers.merge import Concatenate, Add
 from keras.models import Model
+from keras.optimizers import SGD
 from keras.backend import tf as ktf
 import keras.backend as K
+import tensorflow as tf
 
 learning_rate = 1e-3  # Layer specific learning rate
 # Weight decay not implemented

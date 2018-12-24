@@ -121,16 +121,15 @@ def PSPNet_ResNet50(input_shape = (224,224,3)):
 	x = atro_identity_block(x, 3, [512, 512, 2048], stage=5, block='b',dilation_rate= (4,4))
 	x = atro_identity_block(x, 3, [512, 512, 2048], stage=5, block='c',dilation_rate= (4,4))
 	pspout = build_pyramid_pooling_module(x, input_shape)
-	#金字塔池化
-    ouput = Conv2D(512, (3, 3), strides=(1, 1), padding="same", name="conv5_4",use_bias=False)(pspout)
-	ouput = BatchNormalization(momentum=0.95, epsilon=1e-5)(ouput)
-	ouput = Activation('relu')(ouput)
-	ouput = Dropout(0.1)(ouput)
-	ouput = Conv2D(56, (1, 1), padding='same', name="conv6")(ouput)
-	#ouput = Conv2DTranspose(1,(8,8),strides=(4,4),padding="same",use_bias=False,activation='sigmoid')(ouput)
 
-	model = Model(input=base_model.inputs)
+	output = Conv2D(512, (3, 3), strides=(1, 1), padding="same", name="conv5_4",use_bias=False)(pspout)
+	output = BatchNormalization(momentum=0.95, epsilon=1e-5)(output)
+	output = Activation('relu')(output)
+	output = Dropout(0.1)(output)
+	output = Conv2D(56, (1, 1), padding='same', name="conv6")(output)
+	output = Conv2DTranspose(1,(8,8),strides=(4,4),padding="same",use_bias=False,activation='sigmoid')(output)
 
+	model = Model(input=base_model.inputs, outputs=output)
 	#fixed weights
 	layername = r"activation_4"
 	for layers in model.layers:

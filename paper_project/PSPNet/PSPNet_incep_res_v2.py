@@ -1,4 +1,4 @@
-from keras.applications.xception import *
+from keras.applications.inception_resnet_v2 import *
 from keras.models import *
 from keras.layers import *
 from keras import layers
