@@ -11,8 +11,10 @@ from RefineNet.utils.utils import *
 
 def RefineNet_ResNet50(input_shape = (224,224,3), upscaling_method="bilinear"):
 	base_model = ResNet50(include_top=False,weights="imagenet",input_tensor=None,input_shape=input_shape)
-	base_model.summary()
-	#model_base.trainable = False
+	# back_bone can all be fixed
+	for layers in base_model.layers:
+		layers.trainable = False
+	#
 	high = [base_model.get_layer('activation_49').output,
 			base_model.get_layer('activation_40').output,
 			base_model.get_layer('activation_22').output,
@@ -47,6 +49,7 @@ def RefineNet_ResNet50(input_shape = (224,224,3), upscaling_method="bilinear"):
 
 	net = Conv2D(1, 1, activation='sigmoid')(net)  # 可以使用softmax
 	model = Model(base_model.input, net)
+
 	#fixed weights
 	layername = r"activation_7"  #activation_4， activation_10
 	# for layers in model.layers:
