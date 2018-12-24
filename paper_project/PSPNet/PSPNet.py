@@ -242,7 +242,9 @@ def ResNet(inp, layers):
 
 def interp_block(prev_layer, level, feature_map_shape, input_shape, output_stride=8.0):
 
-    kernel_strides = (int(i/output_stride/level) for i in input_shape)
+    kernel_strides0 = int(input_shape[0]/output_stride/level)
+    kernel_strides1 = int(input_shape[1] / output_stride / level)
+    kernel_strides = (kernel_strides0,kernel_strides1)
     names = [
         "conv5_3_pool" + str(level) + "_conv",
         "conv5_3_pool" + str(level) + "_conv_bn"
@@ -301,15 +303,10 @@ def build_pspnet(nb_classes, resnet_layers, input_shape, out_activation='softmax
     # x = Activation('softmax')(x)
 
     x = Conv2D(56, (1, 1), padding='same', name="conv6")(x)
-    x = Conv2DTranspose(1,(8,8),strides=(4,4),padding="same",use_bias=False,activation='sigmoid')(x)
+    x = Conv2DTranspose(1,(16,16),strides=(8,8),padding="same",use_bias=False,activation='sigmoid')(x)
 
     model = Model(inputs=inp, outputs=x)
 
-    # Solver
-    sgd = SGD(lr=learning_rate, momentum=0.9, nesterov=True)
-    model.compile(optimizer=sgd,
-                  loss='categorical_crossentropy',
-                  metrics=['accuracy'])
     return model
 
 if __name__ == '__main__':

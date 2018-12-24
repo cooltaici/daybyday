@@ -35,7 +35,7 @@ from keras.layers import Concatenate
 from keras.layers import Add
 from keras.layers import Dropout
 from keras.layers import BatchNormalization
-from keras.layers import Conv2D
+from keras.layers import Conv2D,Conv2DTranspose
 from keras.layers import DepthwiseConv2D
 from keras.layers import ZeroPadding2D
 from keras.layers import AveragePooling2D
@@ -49,6 +49,7 @@ from keras.utils.data_utils import get_file
 
 WEIGHTS_PATH_X = "https://github.com/bonlime/keras-deeplab-v3-plus/releases/download/1.1/deeplabv3_xception_tf_dim_ordering_tf_kernels.h5"
 WEIGHTS_PATH_MOBILE = "https://github.com/bonlime/keras-deeplab-v3-plus/releases/download/1.1/deeplabv3_mobilenetv2_tf_dim_ordering_tf_kernels.h5"
+
 
 
 class BilinearUpsampling(Layer):
@@ -272,7 +273,7 @@ def _inverted_res_block(inputs, expansion, stride, alpha, filters, block_id, ski
     return x
 
 
-def Deeplabv3(weights='pascal_voc', input_tensor=None, input_shape=(512, 512, 3), classes=21, backbone='mobilenetv2', OS=16, alpha=1.):
+def Deeplabv3(weights=None, input_tensor=None, input_shape=(512, 512, 3), classes=21, backbone='mobilenetv2', OS=16, alpha=1.):
     """ Instantiates the Deeplabv3+ architecture
 
     Optionally loads weights pre-trained
@@ -360,18 +361,18 @@ def Deeplabv3(weights='pascal_voc', input_tensor=None, input_shape=(512, 512, 3)
                                    skip_connection_type='conv', stride=2,
                                    depth_activation=False, return_skip=True)
 
-        x = _xception_block(x, [728, 728, 728], 'entry_flow_block3',
+        x = _xception_block(x, [318, 318, 318], 'entry_flow_block3',         #[728,728,728]
                             skip_connection_type='conv', stride=entry_block3_stride,
                             depth_activation=False)
         for i in range(16):
-            x = _xception_block(x, [728, 728, 728], 'middle_flow_unit_{}'.format(i + 1),
+            x = _xception_block(x, [318, 318, 318], 'middle_flow_unit_{}'.format(i + 1),         #[728,728,728]
                                 skip_connection_type='sum', stride=1, rate=middle_block_rate,
                                 depth_activation=False)
 
-        x = _xception_block(x, [728, 1024, 1024], 'exit_flow_block1',
+        x = _xception_block(x, [318, 428, 428], 'exit_flow_block1',           #[728, 1024, 1024]
                             skip_connection_type='conv', stride=1, rate=exit_block_rates[0],
                             depth_activation=False)
-        x = _xception_block(x, [1536, 1536, 2048], 'exit_flow_block2',
+        x = _xception_block(x, [428, 512, 512], 'exit_flow_block2',           #[1536, 1536, 2048]
                             skip_connection_type='none', stride=1, rate=exit_block_rates[1],
                             depth_activation=True)
 
@@ -435,28 +436,28 @@ def Deeplabv3(weights='pascal_voc', input_tensor=None, input_shape=(512, 512, 3)
     # Image Feature branch： ASPP：一个全局池化，一个1*1卷积，三个孔洞卷积
     #out_shape = int(np.ceil(input_shape[0] / OS))
     b4 = AveragePooling2D(pool_size=(int(np.ceil(input_shape[0] / OS)), int(np.ceil(input_shape[1] / OS))))(x)
-    b4 = Conv2D(256, (1, 1), padding='same',
+    b4 = Conv2D(128, (1, 1), padding='same',
                 use_bias=False, name='image_pooling')(b4)
     b4 = BatchNormalization(name='image_pooling_BN', epsilon=1e-5)(b4)
     b4 = Activation('relu')(b4)
     b4 = BilinearUpsampling((int(np.ceil(input_shape[0] / OS)), int(np.ceil(input_shape[1] / OS))))(b4)
 
     # simple 1x1
-    b0 = Conv2D(256, (1, 1), padding='same', use_bias=False, name='aspp0')(x)
+    b0 = Conv2D(128, (1, 1), padding='same', use_bias=False, name='aspp0')(x)         #256
     b0 = BatchNormalization(name='aspp0_BN', epsilon=1e-5)(b0)
     b0 = Activation('relu', name='aspp0_activation')(b0)
 
     # there are only 2 branches in mobilenetV2. not sure why
     if backbone == 'xception':
         # rate = 6 (12)
-        b1 = SepConv_BN(x, 256, 'aspp1',
-                        rate=atrous_rates[0], depth_activation=True, epsilon=1e-5)
+        b1 = SepConv_BN(x, 128, 'aspp1',
+                        rate=atrous_rates[0], depth_activation=True, epsilon=1e-5)            #256
         # rate = 12 (24)
-        b2 = SepConv_BN(x, 256, 'aspp2',
-                        rate=atrous_rates[1], depth_activation=True, epsilon=1e-5)
+        b2 = SepConv_BN(x, 128, 'aspp2',
+                        rate=atrous_rates[1], depth_activation=True, epsilon=1e-5)         #256
         # rate = 18 (36)
-        b3 = SepConv_BN(x, 256, 'aspp3',
-                        rate=atrous_rates[2], depth_activation=True, epsilon=1e-5)
+        b3 = SepConv_BN(x, 128, 'aspp3',
+                        rate=atrous_rates[2], depth_activation=True, epsilon=1e-5)         #256
 
         # concatenate ASPP branches & project
         x = Concatenate()([b4, b0, b1, b2, b3])
@@ -494,8 +495,10 @@ def Deeplabv3(weights='pascal_voc', input_tensor=None, input_shape=(512, 512, 3)
     else:
         last_layer_name = 'custom_logits_semantic'
 
-    x = Conv2D(classes, (1, 1), padding='same', name=last_layer_name)(x)
-    x = BilinearUpsampling(output_size=(input_shape[0], input_shape[1]))(x)
+    x = Conv2D(56, (1, 1), padding='same', name=last_layer_name)(x)
+    x = Conv2DTranspose(1,(8,8),strides=(4,4),padding="same",use_bias=False,activation='sigmoid')(x)
+    #x = Conv2D(classes, (1, 1), padding='same', name=last_layer_name)(x)
+    #x = BilinearUpsampling(output_size=(input_shape[0], input_shape[1]))(x)
 
     # Ensure that the model takes into account
     # any potential predecessors of `input_tensor`.
@@ -522,4 +525,9 @@ def Deeplabv3(weights='pascal_voc', input_tensor=None, input_shape=(512, 512, 3)
 
 
 if __name__ == '__main__':
+    # Deeplabv3(weights='pascal_voc', input_tensor=None, input_shape=(512, 512, 3), classes=21, backbone='mobilenetv2',
+    #           OS=16, alpha=1.)
+    model = Deeplabv3(weights=None, input_tensor=None, input_shape=(224, 224, 3), classes=1, backbone='xception',
+              OS=8, alpha=1.)
+    model.summary()
     print('load successfully')
