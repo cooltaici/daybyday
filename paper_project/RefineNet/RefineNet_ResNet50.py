@@ -7,9 +7,11 @@ from keras import layers
 from keras_layer_L2Normalization import *
 from keras.backend import tf as ktf
 import os
-from RefineNet.RefineNet import *
+from RefineNet.utils.utils import *
+
 def RefineNet_ResNet50(input_shape = (224,224,3), upscaling_method="bilinear"):
 	base_model = ResNet50(include_top=False,weights="imagenet",input_tensor=None,input_shape=input_shape)
+	base_model.summary()
 	#model_base.trainable = False
 	high = [base_model.get_layer('activation_49').output,
 			base_model.get_layer('activation_40').output,
@@ -18,7 +20,7 @@ def RefineNet_ResNet50(input_shape = (224,224,3), upscaling_method="bilinear"):
 	low = [None, None, None]
 
 	# Get the feature maps to the proper size with bottleneck
-	high[0] = Conv2D(512, (1, 1), padding='same')(high[0])
+	high[0] = Conv2D(512, (1, 1), padding='same')(high[0]) #7*7
 	high[1] = Conv2D(256, (1, 1), padding='same')(high[1])
 	high[2] = Conv2D(256, (1, 1), padding='same')(high[2])
 	high[3] = Conv2D(256, (1, 1), padding='same')(high[3])
@@ -47,10 +49,10 @@ def RefineNet_ResNet50(input_shape = (224,224,3), upscaling_method="bilinear"):
 	model = Model(base_model.input, net)
 	#fixed weights
 	layername = r"activation_7"  #activation_4， activation_10
-	for layers in model.layers:
-		layers.trainable = False
-		if layers.name == layername:
-			break
+	# for layers in model.layers:
+	# 	layers.trainable = False
+	# 	if layers.name == layername:
+	# 		break
 	return model
 
 if __name__ == "__main__":
