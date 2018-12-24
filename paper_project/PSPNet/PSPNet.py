@@ -5,10 +5,8 @@ from keras.layers import Conv2D, MaxPooling2D, AveragePooling2D
 from keras.layers import BatchNormalization, Activation, Input, Dropout, ZeroPadding2D, Lambda, Permute, Reshape, Conv2DTranspose
 from keras.layers.merge import Concatenate, Add
 from keras.models import Model
-from keras.optimizers import SGD
 from keras.backend import tf as ktf
 import keras.backend as K
-import tensorflow as tf
 
 learning_rate = 1e-3  # Layer specific learning rate
 # Weight decay not implemented
@@ -305,11 +303,6 @@ def build_pspnet(nb_classes, resnet_layers, input_shape, out_activation='softmax
 
     model = Model(inputs=inp, outputs=x)
 
-    # Solver
-    sgd = SGD(lr=learning_rate, momentum=0.9, nesterov=True)
-    model.compile(optimizer=sgd,
-                  loss='categorical_crossentropy',
-                  metrics=['accuracy'])
     return model
 
 if __name__ == '__main__':
