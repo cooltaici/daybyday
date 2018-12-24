@@ -3,7 +3,6 @@ from keras.applications.vgg16 import VGG16
 from keras.models import *
 from keras.layers import *
 from keras_layer_L2Normalization import *
-from fcn_inception import *
 import os
 
 def FCN8(nClasses,iflevel = False):
