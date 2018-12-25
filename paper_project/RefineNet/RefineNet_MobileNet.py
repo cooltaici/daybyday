@@ -12,8 +12,8 @@ from RefineNet.utils.utils import *
 def RefineNet_MobileNet(input_shape = (224,224,3), upscaling_method="conv"):
     base_model = MobileNet(include_top=False,input_shape=input_shape)
     #back_bone can all be fixed
-    for layers in base_model.layers:
-        layers.trainable = False
+    # for layers in base_model.layers:
+    #     layers.trainable = False
 
     high = [base_model.get_layer('conv_pw_13_relu').output,
             base_model.get_layer('conv_pw_11_relu').output,

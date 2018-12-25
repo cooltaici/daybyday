@@ -17,6 +17,10 @@ def loss2_1(y_true, y_pred):  #数值非常大，为什么？
     return xent_loss
     #return K.categorical_crossentropy(y_pred, y_true)
 
+# def loss2_5(y_true, y_pred):
+#     return (2. * K.sum(y_true * y_pred) + 1.) / (K.sum(y_true) + K.sum(y_pred) + 1.)
+def loss2_5(y_true, y_pred):
+    return (2. * K.sum(K.sum(K.sum(y_true * y_pred,axis=-1),axis=-1),axis=-1) + 1.) / (K.sum(K.sum(K.sum(y_true,axis=-1),axis=-1),axis=-1) + K.sum(K.sum(K.sum(y_pred,axis=-1),axis=-1),axis=-1) + 1.)
 #二维重合率损失
 def loss2_2(y_true, y_pred):
     mask_pred = K.cast(K.less(0.5, y_pred), K.floatx())
@@ -30,27 +34,14 @@ def loss2_3(y_true, y_pred):  #没什么大问题
 
 #二维对数损失
 def loss2_4(y_true, y_pred):
-    y_true = K.flatten(y_true)
-    y_pred = K.flatten(y_pred)
-    #xent_loss = data_size[0] * data_size[1] * metrics.binary_crossentropy(y_true, y_pred)
+    #y_true = K.flatten(y_true)
+    #y_pred = K.flatten(y_pred)
+    shape = K.shape(y_true)
+    y_true = K.reshape(y_true,(-1,shape[1]*shape[2]))
+    y_pred = K.reshape(y_pred,(-1,shape[1]*shape[2]))
     xent_loss = metrics.binary_crossentropy(y_true, y_pred)  #为什么使用K后端就不行呢？
     return xent_loss
-#支持batch
-def dice_coef(y_true, y_pred):
-    y_true_f = K.flatten(y_true)
-    y_pred_f = K.flatten(y_pred)
-    intersec = y_true_f * y_pred_f
-    intersection = K.sum(K.sum(intersec,axis=-1),axis=-1)
-    return (2. * intersection + 1) / (K.sum(K.sum(y_true_f,axis=-1),axis=-1) + K.sum(K.sum(y_pred_f,axis=-1),axis=-1) + 1)
 
-def dice_coef_loss(y_true, y_pred):
-    return -dice_coef(y_true, y_pred)
-
-def dice_coef_np(y_true,y_pred):
-    y_true_f = y_true.flatten()
-    y_pred_f = y_pred.flatten()
-    intersection = np.sum(y_true_f * y_pred_f)
-    return ((2. * intersection + 1) / (np.sum(y_true_f) + np.sum(y_pred_f) + 1))
 
 #扩增预测函数
 def preclass(pre):
@@ -125,7 +116,7 @@ if __name__ == '__main__':
 class ModelCheckpoint_one(Callback):
     def __init__(self, filepath = None, verbose=1,save_weights_only = True,nepoches = 3):
         super(ModelCheckpoint_one, self).__init__()
-        self.monitor = 'val_categorical_accuracy'
+        self.monitor = 'val_acc_image'
         self.verbose = verbose
         self.filepath = filepath
         self.save_weights_only = save_weights_only

@@ -13,16 +13,16 @@ def PSPNet_MobileNet(input_shape = (224,224,3)):
     # back_bone can all be fixed
     for layers in base_model.layers:
         layers.trainable = False
-    activation_22 = base_model.get_layer("conv_pw_3_relu")
+    activation_22 = base_model.get_layer("conv_pw_5_relu").output
     # block4, output_stride=8
-    x = atro_conv_block(activation_22, 3, [256, 256, 1024], stage=4, block='a', dilation_rate=(2, 2))
+    x = atro_conv_block(activation_22, 3, [256, 256, 1024], stage=4, block='a',strides=(1,1),dilation_rate=(2, 2))
     x = atro_identity_block(x, 3, [256, 256, 1024], stage=4, block='b', dilation_rate=(2, 2))
     x = atro_identity_block(x, 3, [256, 256, 1024], stage=4, block='c', dilation_rate=(2, 2))
     x = atro_identity_block(x, 3, [256, 256, 1024], stage=4, block='d', dilation_rate=(2, 2))
     x = atro_identity_block(x, 3, [256, 256, 1024], stage=4, block='e', dilation_rate=(2, 2))
     x = atro_identity_block(x, 3, [256, 256, 1024], stage=4, block='f', dilation_rate=(2, 2))
     # block5, output_stride=8
-    x = atro_conv_block(x, 3, [512, 512, 2048], stage=5, block='a', dilation_rate=(4, 4))
+    x = atro_conv_block(x, 3, [512, 512, 2048], stage=5, block='a',strides=(1,1), dilation_rate=(4, 4))
     x = atro_identity_block(x, 3, [512, 512, 2048], stage=5, block='b', dilation_rate=(4, 4))
     x = atro_identity_block(x, 3, [512, 512, 2048], stage=5, block='c', dilation_rate=(4, 4))
     pspout = build_pyramid_pooling_module(x, input_shape)
@@ -32,7 +32,7 @@ def PSPNet_MobileNet(input_shape = (224,224,3)):
     output = Activation('relu')(output)
     output = Dropout(0.1)(output)
     output = Conv2D(56, (1, 1), padding='same', name="conv6")(output)
-    output = Conv2DTranspose(1, (8, 8), strides=(4, 4), padding="same", use_bias=False, activation='sigmoid')(output)
+    output = Conv2DTranspose(1, (16, 16), strides=(8, 8), padding="same", use_bias=False, activation='sigmoid')(output)
 
     model = Model(input=base_model.inputs, outputs=output)
     # fixed weights
